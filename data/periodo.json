@@ -3,11 +3,11 @@
   "periodo": "Octubre 2026",
   "inicio": "2026-09-25",
   "cierre": "2026-10-24",
-  "corte": "2026-10-16",
+  "corte": "2026-10-17",
   "turno_corte": "NOCHE",
-  "dias_transcurridos": 22.0,
+  "dias_transcurridos": 23.0,
   "dias_periodo": 30,
-  "dias_restantes": 8.0,
+  "dias_restantes": 7.0,
   "filas_sin_horas": 0
  }
 ]
