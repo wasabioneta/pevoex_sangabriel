@@ -3766,8 +3766,8 @@
   "horas": 3.0,
   "horas_con_viajes": 3.0,
   "viajes_con_horas": 13,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 135.2,
+  "viajes_con_ciclo": 13
  },
  {
   "fecha": "2026-10-17",
@@ -3779,8 +3779,8 @@
   "horas": 5.0,
   "horas_con_viajes": 5.0,
   "viajes_con_horas": 26,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 278.2,
+  "viajes_con_ciclo": 26
  },
  {
   "fecha": "2026-10-17",
@@ -3792,8 +3792,8 @@
   "horas": 5.0,
   "horas_con_viajes": 5.0,
   "viajes_con_horas": 25,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 262.5,
+  "viajes_con_ciclo": 25
  },
  {
   "fecha": "2026-10-17",
@@ -3805,8 +3805,8 @@
   "horas": 0.0,
   "horas_con_viajes": 0.0,
   "viajes_con_horas": 0,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 10.0,
+  "viajes_con_ciclo": 1
  },
  {
   "fecha": "2026-10-17",
@@ -3818,8 +3818,8 @@
   "horas": 1.0,
   "horas_con_viajes": 1.0,
   "viajes_con_horas": 6,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 67.2,
+  "viajes_con_ciclo": 6
  },
  {
   "fecha": "2026-10-17",
@@ -3831,8 +3831,8 @@
   "horas": 5.0,
   "horas_con_viajes": 5.0,
   "viajes_con_horas": 14,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 288.4,
+  "viajes_con_ciclo": 14
  },
  {
   "fecha": "2026-10-17",
@@ -3844,8 +3844,8 @@
   "horas": 2.0,
   "horas_con_viajes": 2.0,
   "viajes_con_horas": 4,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 87.2,
+  "viajes_con_ciclo": 4
  },
  {
   "fecha": "2026-10-17",
@@ -3857,8 +3857,8 @@
   "horas": 1.0,
   "horas_con_viajes": 1.0,
   "viajes_con_horas": 2,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 48.0,
+  "viajes_con_ciclo": 2
  },
  {
   "fecha": "2026-10-17",
@@ -3870,7 +3870,7 @@
   "horas": 1.0,
   "horas_con_viajes": 1.0,
   "viajes_con_horas": 2,
-  "ciclo_min_x_viaje": 0.0,
-  "viajes_con_ciclo": 0
+  "ciclo_min_x_viaje": 40.0,
+  "viajes_con_ciclo": 2
  }
 ]
