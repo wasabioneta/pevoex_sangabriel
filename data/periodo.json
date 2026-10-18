@@ -1,0 +1,13 @@
+[
+ {
+  "periodo": "Octubre 2026",
+  "inicio": "2026-09-25",
+  "cierre": "2026-10-24",
+  "corte": "2026-10-16",
+  "turno_corte": "DIA",
+  "dias_transcurridos": 21.5,
+  "dias_periodo": 30,
+  "dias_restantes": 8.5,
+  "filas_sin_horas": 3
+ }
+]

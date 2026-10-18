@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viajes Volquetes San Gabriel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --font-anthropic-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-anthropic-serif: Georgia, "Times New Roman", serif;
+    --cds-font-size-caption: 12px; --cds-font-size-body: 14px; --cds-font-size-heading: 16px; --cds-font-size-title: 28px;
+    --cds-font-weight-medium: 600;
+    --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-gap-xl: 32px;
+    --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 16px; --cds-pad-xl: 24px;
+    --cds-radius: 10px; --cds-dur-slow: .3s;
+    --color-bg: #fcfcfb; --color-panel: #ffffff; --color-fg: #1b1b19; --color-fg-muted: #66655f; --color-border-line: #e4e3df;
+    --color-ok: #1f7a3d; --color-warn: #b26a00; --color-bad: #c8322f;
+    --cds-chart-grid: #ecebe7; --cds-chart-axis: #c9c8c2; --cds-chart-reference: #6b6a64; --cds-chart-muted: #b7b6b0; --cds-chart-status-critical: #d43d3a;
+    --cds-surface-popover: #ffffff; --cds-border: #dddcd7; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.12); --cds-text-secondary: #66655f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --color-bg: #1a1a19; --color-panel: #232321; --color-fg: #f2f1ec; --color-fg-muted: #b3b2ab; --color-border-line: #3a3936;
+      --color-ok: #5cc17f; --color-warn: #e0a24a; --color-bad: #ef6b68;
+      --cds-chart-grid: #302f2c; --cds-chart-axis: #4a4945; --cds-chart-reference: #a9a8a1; --cds-chart-muted: #6a6964; --cds-chart-status-critical: #ef6b68;
+      --cds-surface-popover: #2b2b29; --cds-border: #44433f; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.5); --cds-text-secondary: #b3b2ab;
+    }
+  }
+  body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: 14px; }
+  #dash-root { max-width: 1280px; margin-inline: auto; padding: 24px 16px 40px; }
+  .dash-skeleton { color: transparent !important; background: var(--cds-chart-grid); border-radius: 4px; }
+  .sg-meta { font-size: 12px; color: var(--color-fg-muted); margin: 0 0 16px; }
+</style>
+</head>
+<body>
+<div id="dash-root">
+<p class="sg-meta" id="sg-meta">Datos de la hoja VOLQUETES_TON del libro HORAS EQUIPOS.</p>
+<style>
+  .vj { display: grid; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); }
+  .vj-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+  .vj-take { margin: var(--cds-gap-xs) 0 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-body); max-width: 80ch; }
+  .vj .vj-take b { font-weight: 600; }
+  .vj-tiles { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
+  .vj-tile, .vj-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+  .vj-tile .lbl { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .vj-tile .num { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; margin-top: var(--cds-gap-xs); }
+  .vj-tile .num .vj-de { font-size: var(--cds-font-size-heading); color: var(--color-fg-muted); }
+  .vj-tile .num.up, .vj .vj-tile b.up { color: var(--color-ok); }
+  .vj-tile .num.down, .vj .vj-tile b.down { color: var(--color-bad); }
+  .vj .vj-tile b { font-weight: 600; }
+  .vj-tile .sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-xs); }
+  .vj-card h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .vj-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 var(--cds-gap-md); max-width: 95ch; }
+  .vj-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-bottom: var(--cds-gap-sm); }
+  .vj-legend span { display: inline-flex; align-items: center; gap: var(--cds-gap-xs); }
+  .vj-legend i { width: .75rem; height: .75rem; border-radius: 2px; display: inline-block; }
+  .vj-chart { position: relative; min-height: 260px; }
+  .vj-chart.rutas { min-height: 200px; }
+  .vj-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
+  .vj-tip .t { color: var(--cds-text-secondary); margin-bottom: 2px; }
+  .vj-scroll { overflow: auto; max-height: 34rem; }
+  .vj-table { border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; width: 100%; }
+  .vj-table th { position: sticky; top: 0; background: var(--color-panel); z-index: 1; text-align: right; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .vj-table td { text-align: right; padding: 3px var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .vj-table th.l, .vj-table td.l { text-align: left; }
+  .vj-table td.zero { color: var(--color-fg-muted); }
+  .vj-table td.tot, .vj-table th.tot { font-weight: 600; }
+  .vj-table tr.noche td { background: color-mix(in srgb, var(--color-panel) 92%, var(--color-fg) 8%); }
+  .vj-table tfoot td { font-weight: 600; border-top: 2px solid var(--color-border-line); position: sticky; bottom: 0; background: var(--color-panel); }
+  .vj-tabs { display: inline-flex; gap: 4px; margin-bottom: var(--cds-gap-md); }
+  .vj-tabs button { font: inherit; font-size: var(--cds-font-size-caption); padding: 4px 12px; border-radius: 999px; border: 1px solid var(--color-border-line); background: transparent; color: var(--color-fg); cursor: pointer; }
+  .vj-tabs button[aria-pressed=true] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
+  .vj-tabs button:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+  .vj-rank td .bar { display: inline-block; height: .55rem; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+  .vj-chart.rd { min-height: 240px; }
+  .vj-sinfo .sw { display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; vertical-align: -1px; }
+  .vj-chart.s { min-height: 200px; }
+  .vj-sinfo { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 0; font-variant-numeric: tabular-nums; }
+  .vj .vj-sinfo b.neg { color: var(--color-bad); font-weight: 600; }
+  .vj .vj-sinfo b.pos { color: var(--color-ok); font-weight: 600; }
+  .vj-sub { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: var(--cds-gap-md) 0 var(--cds-gap-xs); }
+  .vj-rank td.pos { font-family: var(--font-anthropic-serif); }
+  .vj-rank-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr)); }
+  .vj-foot { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; max-width: 95ch; }
+  .vj-fail { display: flex; align-items: center; justify-content: center; gap: var(--cds-gap-xs); min-height: inherit; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .vj-fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  @media (max-width: 640px) { .vj-hide-sm { display: none; } }
+</style>
+
+<div class="vj">
+  <header class="vj-head" id="resumen">
+    <h1>Viajes de volquetes · periodo valorizable <span data-source="periodo" data-field="periodo" data-row="0" class="dash-skeleton">—</span></h1>
+    <p class="vj-take" id="vj-take">
+      <b data-source="resumen" data-field="viajes" data-row="0" class="dash-skeleton">—</b> viajes hasta el
+      <span class="vj-corte" data-source="periodo" data-field="corte" data-row="0">—</span>, a
+      <b data-source="resumen" data-field="ratio" data-row="0" class="dash-skeleton">—</b> viajes por hora de motor.
+      <span id="vj-take-extra"></span>
+    </p>
+  </header>
+
+  <section class="vj-tiles" id="indicadores">
+    <div class="vj-tile"><div class="lbl">Días con información</div><div class="num"><span data-source="kpi" data-row="0" data-field="dias_info">—</span> <span class="vj-de">de <span data-source="kpi" data-row="0" data-field="dias_periodo">—</span></span></div>
+      <div class="sub">Del <span class="vj-ini" data-source="periodo" data-field="inicio" data-row="0">—</span> al <span class="vj-corte" data-source="periodo" data-field="corte" data-row="0">—</span> (último día con reporte)</div></div>
+    <div class="vj-tile"><div class="lbl">J4 a TC: viajes acumulados</div><div class="num" data-source="kpi" data-where="ruta=J4 a TC" data-field="viajes">—</div>
+      <div class="sub">Cumplimiento <b class="vj-cump" data-source="kpi" data-where="ruta=J4 a TC" data-field="cumplimiento">—</b> de la meta a la fecha (<span data-source="kpi" data-where="ruta=J4 a TC" data-field="meta_fecha">—</span>) · <span data-source="kpi" data-where="ruta=J4 a TC" data-field="pct_mes">—</span> de 2 758 del mes</div></div>
+    <div class="vj-tile"><div class="lbl">TC a CRF: viajes acumulados</div><div class="num" data-source="kpi" data-where="ruta=TC a CRF" data-field="viajes">—</div>
+      <div class="sub">Cumplimiento <b class="vj-cump" data-source="kpi" data-where="ruta=TC a CRF" data-field="cumplimiento">—</b> de la meta a la fecha (<span data-source="kpi" data-where="ruta=TC a CRF" data-field="meta_fecha">—</span>) · <span data-source="kpi" data-where="ruta=TC a CRF" data-field="pct_mes">—</span> de 2 758 del mes</div></div>
+    <div class="vj-tile"><div class="lbl">J4 a TC: viajes por hora del <span class="vj-fr">—</span></div><div class="num vj-rd" data-source="kpi" data-where="ruta=J4 a TC" data-field="ratio_dia">—</div>
+      <div class="sub">Promedio del periodo <span data-source="kpi" data-where="ruta=J4 a TC" data-field="ratio_prom">—</span> · <span data-source="kpi" data-where="ruta=J4 a TC" data-field="viajes_dia">—</span> viajes ese día</div></div>
+    <div class="vj-tile"><div class="lbl">TC a CRF: viajes por hora del <span class="vj-fr">—</span></div><div class="num vj-rd" data-source="kpi" data-where="ruta=TC a CRF" data-field="ratio_dia">—</div>
+      <div class="sub">Promedio del periodo <span data-source="kpi" data-where="ruta=TC a CRF" data-field="ratio_prom">—</span> · <span data-source="kpi" data-where="ruta=TC a CRF" data-field="viajes_dia">—</span> viajes ese día</div></div>
+  </section>
+
+  <div class="vj-rank-grid" id="viajes-dia">
+    <section class="vj-card" id="viajes-j4tc">
+      <h2>J4 a TC: viajes por día y turno</h2>
+      <p class="vj-note">Material fuente de cantera J4 al tren de chancado. Barras: viajes de cada fecha, turno día abajo y noche arriba, con el número de cada turno dentro. Línea roja: target de 92 viajes por día.</p>
+      <div class="vj-legend vj-rd-legend"></div>
+      <div class="vj-chart rd" id="vj-rd-j4tc" data-source="pivot"></div>
+      <p class="vj-sinfo" id="vj-rdi-j4tc"></p>
+      <h3 class="vj-sub">Curva S: viajes acumulados, meta mensual y proyección</h3>
+      <div class="vj-chart s" id="vj-rs-j4tc" data-source="pivot periodo"></div>
+      <p class="vj-sinfo" id="vj-si-j4tc"></p>
+    </section>
+    <section class="vj-card" id="viajes-tccrf">
+      <h2>TC a CRF: viajes por día y turno</h2>
+      <p class="vj-note">Agregado del tren de chancado a CRF. Barras: viajes de cada fecha, turno día abajo y noche arriba, con el número de cada turno dentro. Línea roja: target de 92 viajes por día.</p>
+      <div class="vj-legend vj-rd-legend"></div>
+      <div class="vj-chart rd" id="vj-rd-tccrf" data-source="pivot"></div>
+      <p class="vj-sinfo" id="vj-rdi-tccrf"></p>
+      <h3 class="vj-sub">Curva S: viajes acumulados, meta mensual y proyección</h3>
+      <div class="vj-chart s" id="vj-rs-tccrf" data-source="pivot periodo"></div>
+      <p class="vj-sinfo" id="vj-si-tccrf"></p>
+    </section>
+  </div>
+
+  <section class="vj-card" id="detalle-rutas">
+    <h2>Viajes por fecha, turno y ruta</h2>
+    <p class="vj-note">Cada ruta es la pareja origen → destino escrita en el parte. Las filas sombreadas son el turno noche; un punto indica que no hubo viajes.</p>
+    <div class="vj-scroll">
+      <table class="vj-table" id="vj-pivot" data-source="pivot" data-row-key="fecha,turno">
+        <thead><tr id="vj-pivot-head"><th class="l" data-field="fecha">Fecha</th><th class="l" data-field="turno">Turno</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr id="vj-pivot-foot"></tr></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section class="vj-card" id="ratio-rutas">
+    <h2>Viajes por hora según ruta</h2>
+    <p class="vj-note">Viajes ÷ horas de motor de los tramos de esa ruta. Solo cuentan los tramos con horas registradas; un tramo con HM inicial igual al final suma viajes pero no entra al ratio. Al lado: viajes del periodo y ciclo promedio por viaje.</p>
+    <div class="vj-chart rutas dash-skeleton" id="vj-chart-rutas" data-source="por_ruta"></div>
+  </section>
+
+  <section id="ranking">
+    <div class="vj-tabs" role="group" aria-label="Turno del ranking">
+      <button type="button" id="vj-t-dia" aria-pressed="true">Turno día</button>
+      <button type="button" id="vj-t-noche" aria-pressed="false">Turno noche</button>
+    </div>
+    <div class="vj-rank-grid">
+      <section class="vj-card" id="ranking-j4tc">
+        <h2>Ranking de operadores · J4 a TC</h2>
+        <p class="vj-note">Material fuente de cantera J4 al tren de chancado. Ordenado por viajes por hora de motor (viajes de los tramos con horas ÷ esas horas); el índice compara con el promedio de la ruta (100 = promedio).</p>
+        <div class="vj-scroll">
+          <table class="vj-table vj-rank" id="vj-rank-j4tc" data-source="ranking" data-row-key="turno,ruta,operador">
+            <thead><tr>
+              <th class="l">#</th>
+              <th class="l" data-field="operador">Operador</th>
+              <th data-field="ratio">Viajes/h</th>
+              <th data-field="indice">Índice</th>
+              <th data-field="viajes">Viajes</th>
+              <th data-field="horas">Horas</th>
+              <th class="vj-hide-sm" data-field="dias">Turnos</th>
+              <th class="l vj-hide-sm" data-field="volquetes">Volquetes</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="vj-card" id="ranking-tccrf">
+        <h2>Ranking de operadores · TC a CRF</h2>
+        <p class="vj-note">Agregado del tren de chancado a CRF. Ordenado por viajes por hora de motor (viajes de los tramos con horas ÷ esas horas); el índice compara con el promedio de la ruta (100 = promedio).</p>
+        <div class="vj-scroll">
+          <table class="vj-table vj-rank" id="vj-rank-tccrf" data-source="ranking" data-row-key="turno,ruta,operador">
+            <thead><tr>
+              <th class="l">#</th>
+              <th class="l" data-field="operador">Operador</th>
+              <th data-field="ratio">Viajes/h</th>
+              <th data-field="indice">Índice</th>
+              <th data-field="viajes">Viajes</th>
+              <th data-field="horas">Horas</th>
+              <th class="vj-hide-sm" data-field="dias">Turnos</th>
+              <th class="l vj-hide-sm" data-field="volquetes">Volquetes</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <p class="vj-foot">Fuente: hoja VOLQUETES_TON del libro HORAS EQUIPOS (N° VIAJES, ORIGEN, DESTINO, HM y CICLO PROM.). Se actualiza todos los días a las 10:30.</p>
+</div>
+
+
+
+
+
+</div>
+<script>
+// Reemplazo minimo del objeto `dash` del tablero de Claude: lee data/*.json y resuelve los calculos.
+(function () {
+  const files = { viajes: 'data/viajes.json', periodo: 'data/periodo.json' };
+  const raw = {}, calcs = {}, cbs = [];
+  const colors = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+  function data(id) {
+    if (id in raw) return raw[id] instanceof Error ? { status: 'error', data: [], message: String(raw[id]) } : { status: 'ok', data: raw[id] };
+    if (id in calcs) {
+      const c = calcs[id];
+      if (c.cache) return c.cache;
+      const ins = c.inputs.map(data);
+      if (ins.some((d) => d.status === 'error')) return { status: 'error', data: [] };
+      if (ins.some((d) => d.status !== 'ok')) return { status: 'loading', data: [] };
+      try { c.cache = { status: 'ok', data: c.fn(...ins.map((d) => d.data)) }; } catch (e) { console.error(id, e); c.cache = { status: 'error', data: [] }; }
+      return c.cache;
+    }
+    return { status: 'loading', data: [] };
+  }
+  window.dash = {
+    colors, data,
+    calc: (id, o) => { calcs[id] = { inputs: o.inputs, fn: o.fn }; },
+    onData: (fn) => { cbs.push(fn); fn(); },
+    params: () => ({}), setParams: () => {}, resetParams: () => {}, setLink: () => {}, refresh: () => {},
+  };
+  const run = () => cbs.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
+  Promise.all(Object.entries(files).map(([id, url]) => fetch(url, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); })
+    .then((j) => { raw[id] = j; }).catch((e) => { raw[id] = e; })))
+    .then(() => { Object.values(calcs).forEach((c) => delete c.cache); run(); });
+  let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(run, 150); });
+})();
+</script>
+<script>
+  dash.calc('por_ruta', {
+    inputs: ['viajes'],
+    title: 'Viajes por ruta',
+    description: 'Por ruta: viajes, horas de motor de los tramos con horas, viajes por hora y ciclo promedio por viaje.',
+    fn: (viajes) => d3.groups(viajes, (r) => r.ruta).map(([ruta, rs]) => {
+      const vh = d3.sum(rs, (r) => r.viajes_con_horas), h = d3.sum(rs, (r) => r.horas_con_viajes), vc = d3.sum(rs, (r) => r.viajes_con_ciclo);
+      return { ruta, viajes: d3.sum(rs, (r) => r.viajes), horas: h, ratio: h > 0 ? vh / h : null,
+               ciclo: vc > 0 ? d3.sum(rs, (r) => r.ciclo_min_x_viaje) / vc : null };
+    }).sort((a, b) => b.viajes - a.viajes),
+  });
+  dash.calc('pivot', {
+    inputs: ['viajes', 'periodo'],
+    title: 'Viajes por fecha, turno y ruta',
+    description: 'Todas las fechas del periodo hasta el corte, en turno día y noche, con los viajes de cada ruta y el total.',
+    fn: (viajes, periodo) => {
+      const p = periodo[0], out = [];
+      for (let d = new Date(p.inicio + 'T00:00:00Z'); d <= new Date(p.corte + 'T00:00:00Z'); d = new Date(d.getTime() + 864e5)) {
+        const fecha = d.toISOString().slice(0, 10);
+        for (const turno of ['DIA', 'NOCHE']) {
+          const row = { fecha, turno, total: 0 };
+          viajes.filter((r) => r.fecha === fecha && r.turno === turno).forEach((r) => { row[r.ruta] = (row[r.ruta] || 0) + r.viajes; row.total += r.viajes; });
+          out.push(row);
+        }
+      }
+      return out;
+    },
+  });
+  dash.calc('ranking', {
+    inputs: ['viajes', 'por_ruta'],
+    title: 'Ranking de operadores por ruta',
+    description: 'Rutas J4 a TC y TC a CRF por separado. Por turno, ruta y operador: viajes, horas, viajes/h (viajes de tramos con horas ÷ esas horas) e índice = viajes/h ÷ viajes/h promedio de la ruta × 100.',
+    fn: (viajes, por_ruta) => {
+      const rutas = ['J4 a TC', 'TC a CRF'];
+      const rate = new Map(por_ruta.map((r) => [r.ruta, r.ratio]));
+      return d3.groups(viajes.filter((r) => rutas.includes(r.ruta)), (r) => r.turno + '|' + r.ruta + '|' + r.operador).map(([k, rs]) => {
+        const [turno, ruta, operador] = k.split('|');
+        const vh = d3.sum(rs, (r) => r.viajes_con_horas), h = d3.sum(rs, (r) => r.horas_con_viajes);
+        const ratio = h > 0 ? vh / h : null, ref = rate.get(ruta);
+        return { turno, ruta, operador, viajes: d3.sum(rs, (r) => r.viajes), horas: h, ratio,
+                 indice: ratio !== null && ref ? (ratio / ref) * 100 : null,
+                 dias: new Set(rs.map((r) => r.fecha)).size, volquetes: Array.from(new Set(rs.map((r) => r.volquete))).sort().join(', ') };
+      });
+    },
+  });
+  dash.calc('kpi', {
+    inputs: ['viajes', 'periodo', 'por_ruta'],
+    title: 'Indicadores por ruta',
+    description: 'Por ruta (J4 a TC y TC a CRF): días con información de 30, viajes acumulados, meta a la fecha = 2758 × días con información ÷ días del periodo, cumplimiento = viajes ÷ meta a la fecha, y viajes por hora del día del reporte frente al promedio del periodo.',
+    fn: (viajes, periodo, por_ruta) => {
+      const p = periodo[0], META = 2758;
+      const dias_info = Math.round((new Date(p.corte) - new Date(p.inicio)) / 864e5) + 1, dias_periodo = p.dias_periodo;
+      return ['J4 a TC', 'TC a CRF'].map((ruta) => {
+        const rs = viajes.filter((r) => r.ruta === ruta), hoy = rs.filter((r) => r.fecha === p.corte);
+        const acum = d3.sum(rs, (r) => r.viajes), meta_fecha = META * dias_info / dias_periodo;
+        const h = d3.sum(hoy, (r) => r.horas_con_viajes), vh = d3.sum(hoy, (r) => r.viajes_con_horas);
+        const prom = (por_ruta.find((r) => r.ruta === ruta) || {}).ratio ?? null;
+        return { ruta, dias_info, dias_periodo, fecha_reporte: p.corte, turno_reporte: p.turno_corte, viajes: acum, meta_fecha,
+                 cumplimiento: meta_fecha ? acum / meta_fecha : null, pct_mes: acum / META,
+                 viajes_dia: d3.sum(hoy, (r) => r.viajes), ratio_dia: h > 0 ? vh / h : null, ratio_prom: prom };
+      });
+    },
+  });
+  dash.calc('resumen', {
+    inputs: ['viajes', 'por_ruta'],
+    title: 'Resumen del periodo',
+    description: 'Total de viajes, promedio por día con viajes, viajes por hora de motor y ruta con más viajes.',
+    fn: (viajes, por_ruta) => {
+      const total = d3.sum(viajes, (r) => r.viajes), dias = new Set(viajes.map((r) => r.fecha)).size;
+      const h = d3.sum(viajes, (r) => r.horas_con_viajes), vh = d3.sum(viajes, (r) => r.viajes_con_horas);
+      const top = por_ruta[0] || {};
+      return [{ viajes: total, dias, viajes_dia: dias ? total / dias : null, ratio: h > 0 ? vh / h : null, ruta_top: top.ruta || null, ruta_top_viajes: top.viajes || 0 }];
+    },
+  });
+</script>
+<script>
+  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
+  const DOW = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const fdate = (s) => { if (!s) return '—'; const d = String(s).slice(0, 10).split('-'); return d.length === 3 ? `${+d[2]}-${MES[+d[1] - 1]}` : '—'; };
+  const fdow = (s) => DOW[new Date(s + 'T12:00:00Z').getUTCDay()];
+  const f0 = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 0 });
+  const f1 = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const f2 = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const setAll = (sel, txt) => document.querySelectorAll(sel).forEach((el) => { el.textContent = txt; el.classList.remove('dash-skeleton'); });
+  const fail = (el) => { el.replaceChildren(); const d = document.createElement('div'); d.className = 'vj-fail'; d.textContent = 'Failed to load'; el.appendChild(d); };
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
+  const TURNO_C = { DIA: () => dash.colors[0], NOCHE: () => dash.colors[1] };
+  window.vjTurno = window.vjTurno || 'DIA';
+
+  function tipFor(box) {
+    const tip = el('div', 'vj-tip'); tip.hidden = true; box.appendChild(tip);
+    return {
+      show(ev, title, lines) {
+        tip.replaceChildren(el('div', 't', title), ...lines.map((l) => el('div', null, l)));
+        tip.hidden = false;
+        const [mx, my] = d3.pointer(ev, box);
+        tip.style.left = Math.min(Math.max(0, mx + 12), box.clientWidth - tip.offsetWidth) + 'px';
+        tip.style.top = Math.max(0, my - tip.offsetHeight - 8) + 'px';
+      },
+      hide() { tip.hidden = true; },
+    };
+  }
+  const axisStyle = (g) => g.attr('font-size', null).attr('font-family', null)
+    .call((s) => s.select('.domain').attr('stroke', 'var(--cds-chart-axis)'))
+    .call((s) => s.selectAll('text').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)'));
+
+  function serieRuta(piv, ruta) {
+    const fechas = Array.from(new Set(piv.map((r) => r.fecha)));
+    const by = new Map(piv.map((r) => [r.fecha + '|' + r.turno, r[ruta] || 0]));
+    let acc = 0;
+    return fechas.map((f) => { const d = by.get(f + '|DIA') || 0, n = by.get(f + '|NOCHE') || 0; acc += d + n; return { f, d, n, t: d + n, acc }; });
+  }
+
+  const TARGET_DIA = 92;   // target diario de viajes por ruta (2758 / 30 dias), dado por el usuario
+
+  function drawRutaDia(box, serie, ruta, info) {
+    box.replaceChildren(); box.classList.remove('dash-skeleton');
+    const W = Math.max(280, box.clientWidth), H = 240, ml = 36, mt = 16, mb = 30;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const probe = svg.append('text').style('font-size', 'var(--cds-font-size-caption)').text(`Target ${TARGET_DIA}`);
+    const mr = probe.node().getComputedTextLength() + 10; probe.remove();
+    const x = d3.scaleBand(serie.map((r) => r.f), [ml, W - mr]).padding(.16);
+    const y = d3.scaleLinear([0, Math.max(d3.max(serie, (r) => r.t) || 0, TARGET_DIA) * 1.12], [H - mb, mt]).nice();
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', ml).attr('x2', W - mr).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickFormat((d) => f0.format(d))).call(axisStyle).call((g) => g.select('.domain').remove()).call((g) => g.selectAll('text').attr('dx', '-.3em'));
+    const step = Math.max(1, Math.ceil(serie.length / Math.max(1, Math.floor((W - ml - mr) / 44))));
+    svg.append('g').selectAll('text').data(serie.filter((_, i) => i % step === 0)).join('text').attr('x', (r) => x(r.f) + x.bandwidth() / 2).attr('y', H - mb + 16)
+      .attr('text-anchor', 'middle').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text((r) => fdate(r.f));
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', H - mb).attr('y2', H - mb).attr('stroke', 'var(--cds-chart-axis)');
+    const g = svg.append('g').selectAll('g').data(serie).join('g');
+    g.filter((r) => r.d).append('rect').attr('x', (r) => x(r.f)).attr('width', x.bandwidth()).attr('y', (r) => y(r.d)).attr('height', (r) => y(0) - y(r.d)).attr('rx', 2).style('fill', TURNO_C.DIA());
+    g.filter((r) => r.n).append('rect').attr('x', (r) => x(r.f)).attr('width', x.bandwidth()).attr('y', (r) => y(r.t) + (r.d ? 1 : 0))
+      .attr('height', (r) => Math.max(0, y(r.d) - y(r.t) - (r.d ? 1 : 0))).attr('rx', 2).style('fill', TURNO_C.NOCHE());
+    // numero de viajes de cada turno dentro de su segmento, si cabe
+    const fits = (h) => x.bandwidth() >= 16 && h >= 13;
+    const inner = (val, yTop, yBot) => ({ val, yc: (yTop + yBot) / 2, ok: val > 0 && fits(yBot - yTop) });
+    g.each(function (r) {
+      const sel = d3.select(this);
+      [inner(r.d, y(r.d), y(0)), inner(r.n, y(r.t), y(r.d))].forEach((s_) => {
+        if (s_.ok) sel.append('text').attr('x', x(r.f) + x.bandwidth() / 2).attr('y', s_.yc).attr('dy', '.35em').attr('text-anchor', 'middle')
+          .style('fill', 'var(--color-bg)').style('font-size', '10px').style('font-weight', 600).text(f0.format(s_.val));
+      });
+    });
+    if (x.bandwidth() >= 16) g.filter((r) => r.t).append('text').attr('x', (r) => x(r.f) + x.bandwidth() / 2).attr('y', (r) => y(r.t) - 4).attr('text-anchor', 'middle')
+      .style('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)').style('font-weight', 600).text((r) => f0.format(r.t));
+    // target diario
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(TARGET_DIA)).attr('y2', y(TARGET_DIA)).attr('stroke', 'var(--cds-chart-status-critical)')
+      .attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
+    svg.append('text').attr('x', W - mr + 4).attr('y', y(TARGET_DIA)).attr('dy', '.35em').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(`Target ${TARGET_DIA}`);
+    const tip = tipFor(box);
+    g.append('rect').attr('x', (r) => x(r.f)).attr('width', x.bandwidth()).attr('y', mt).attr('height', H - mb - mt).style('fill', 'transparent')
+      .on('mousemove', (ev, r) => tip.show(ev, `${ruta} · ${fdow(r.f)} ${fdate(r.f)}`, [`Día: ${f0.format(r.d)} viajes`, `Noche: ${f0.format(r.n)} viajes`,
+        `Total: ${f0.format(r.t)} (${r.t >= TARGET_DIA ? '+' : '−'}${f0.format(Math.abs(r.t - TARGET_DIA))} vs target ${TARGET_DIA})`]))
+      .on('mouseleave', () => tip.hide());
+    // resumen por turno
+    const conD = serie.filter((r) => r.d > 0), conN = serie.filter((r) => r.n > 0), totD = d3.sum(serie, (r) => r.d), totN = d3.sum(serie, (r) => r.n);
+    const enTarget = serie.filter((r) => r.t >= TARGET_DIA).length, conViajes = serie.filter((r) => r.t > 0).length;
+    info.replaceChildren(
+      el('span', 'sw d'), el('span', null, ` Día: ${f0.format(totD)} viajes (${f0.format(totD / Math.max(1, totD + totN) * 100)} %, ${conD.length ? f0.format(totD / conD.length) : '—'} por turno)   `),
+      el('span', 'sw n'), el('span', null, ` Noche: ${f0.format(totN)} viajes (${f0.format(totN / Math.max(1, totD + totN) * 100)} %, ${conN.length ? f0.format(totN / conN.length) : '—'} por turno)   `),
+      el('span', null, `· ${enTarget} de ${conViajes} días con viajes alcanzaron el target de ${TARGET_DIA}`));
+    info.querySelector('.sw.d').style.background = TURNO_C.DIA(); info.querySelector('.sw.n').style.background = TURNO_C.NOCHE();
+  }
+
+  const META_VIAJES = 2758;   // meta mensual de viajes por ruta (J4 a TC y TC a CRF), dada por el usuario
+
+  function drawCurvaS(box, serie, ruta, p, info) {
+    box.replaceChildren(); box.classList.remove('dash-skeleton');
+    // todas las fechas del periodo, del inicio al cierre
+    const dias = [];
+    for (let d = new Date(p.inicio + 'T00:00:00Z'); d <= new Date(p.cierre + 'T00:00:00Z'); d = new Date(d.getTime() + 864e5)) dias.push(d.toISOString().slice(0, 10));
+    const n = dias.length, plan = (i) => META_VIAJES * (i + 1) / n;
+    const real = serie.filter((r) => dias.includes(r.f));
+    const last = real[real.length - 1] || { acc: 0, f: null };
+    const W = Math.max(280, box.clientWidth), H = 200, ml = 44, mt = 16, mb = 26;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const probe = svg.append('text').style('font-size', 'var(--cds-font-size-caption)').text(`Proy. ${f0.format(9999)}`);
+    const mr = probe.node().getComputedTextLength() + 12; probe.remove();
+    const x = d3.scalePoint(dias, [ml, W - mr]);
+    const iL = last.f ? dias.indexOf(last.f) : -1, medio0 = p.turno_corte === 'DIA' && last.f === p.corte ? 0.5 : 1;
+    const proyMax = iL >= 0 ? last.acc + (last.acc / (iL + medio0)) * (n - (iL + medio0)) : 0;
+    const y = d3.scaleLinear([0, Math.max(META_VIAJES, last.acc, proyMax) * 1.06], [H - mb, mt]).nice();
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', ml).attr('x2', W - mr).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickFormat((d) => f0.format(d))).call(axisStyle).call((g) => g.select('.domain').remove()).call((g) => g.selectAll('text').attr('dx', '-.3em'));
+    const step = Math.max(1, Math.ceil(n / Math.max(1, Math.floor((W - ml - mr) / 44))));
+    svg.append('g').selectAll('text').data(dias.filter((_, i) => i % step === 0)).join('text').attr('x', (f) => x(f)).attr('y', H - mb + 16)
+      .attr('text-anchor', 'middle').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(fdate);
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', H - mb).attr('y2', H - mb).attr('stroke', 'var(--cds-chart-axis)');
+    // meta: linea recta acumulada hasta el cierre
+    svg.append('path').datum(dias).attr('d', d3.line().x((f) => x(f)).y((f, i) => y(plan(i)))).attr('fill', 'none').attr('stroke', 'var(--cds-chart-reference)')
+      .attr('stroke-width', 2).attr('stroke-dasharray', '5 4');
+    svg.append('text').attr('x', x(dias[n - 1]) + 6).attr('y', y(META_VIAJES)).attr('dy', '.35em').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(`Meta ${f0.format(META_VIAJES)}`);
+    // real acumulado
+    const gid = 'vjg-' + ruta.replace(/[^a-z0-9]/gi, '');
+    const grad = svg.append('defs').append('linearGradient').attr('id', gid).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
+    [[0, .26], [.25, .16], [.5, .08], [.75, .03], [1, 0]].forEach(([o, a]) => grad.append('stop').attr('offset', o).attr('style', `stop-color: ${dash.colors[2]}; stop-opacity: ${a}`));
+    svg.append('path').datum(real).attr('d', d3.area().x((r) => x(r.f)).y0(y(0)).y1((r) => y(r.acc))).style('fill', `url(#${gid})`);
+    svg.append('path').datum(real).attr('d', d3.line().x((r) => x(r.f)).y((r) => y(r.acc))).attr('fill', 'none').attr('stroke', dash.colors[2])
+      .attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
+    if (last.f) {
+      const i = dias.indexOf(last.f), esperado = plan(i), bajo = last.acc < esperado;
+      svg.append('circle').attr('cx', x(last.f)).attr('cy', y(last.acc)).attr('r', 4).style('fill', bajo ? 'var(--cds-chart-status-critical)' : dash.colors[2]);
+      svg.append('text').attr('x', x(last.f)).attr('y', y(last.acc) - 9).attr('text-anchor', 'middle').style('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)').style('font-weight', 600).text(f0.format(last.acc));
+      // proyeccion: promedio diario historico (dias transcurridos; el ultimo cuenta medio dia si solo se cargo el turno dia)
+      const medio = p.turno_corte === 'DIA' && last.f === p.corte ? 0.5 : 1;
+      const transc = i + medio, prom = last.acc / transc, restante = n - transc, proy = last.acc + prom * restante;
+      const pts = [{ f: last.f, v: last.acc }, { f: dias[n - 1], v: proy }];
+      svg.append('path').datum(pts).attr('d', d3.line().x((d) => x(d.f)).y((d) => y(d.v))).attr('fill', 'none').attr('stroke', dash.colors[2])
+        .attr('stroke-width', 2).attr('stroke-dasharray', '2 4').attr('stroke-linecap', 'round').attr('opacity', .9);
+      svg.append('circle').attr('cx', x(dias[n - 1])).attr('cy', y(proy)).attr('r', 3.5).style('fill', 'var(--color-panel)').attr('stroke', dash.colors[2]).attr('stroke-width', 2);
+      const yl = Math.abs(y(proy) - y(META_VIAJES)) < 14 ? y(proy) + (proy < META_VIAJES ? 14 : -14) : y(proy);
+      svg.append('text').attr('x', x(dias[n - 1]) + 6).attr('y', yl).attr('dy', '.35em').style('fill', dash.colors[2]).style('font-size', 'var(--cds-font-size-caption)').style('font-weight', 600).text(`Proy. ${f0.format(proy)}`);
+      const falta = META_VIAJES - last.acc, quedan = n - 1 - i;
+      info.replaceChildren(
+        el('span', null, `Real ${f0.format(last.acc)} vs. meta al ${fdate(last.f)} ${f0.format(esperado)} `),
+        el('b', bajo ? 'neg' : 'pos', `(${bajo ? '−' : '+'}${f0.format(Math.abs(last.acc - esperado))})`),
+        el('span', null, ` · proyección al ${fdate(dias[n - 1])}: `), el('b', proy < META_VIAJES ? 'neg' : 'pos', `${f0.format(proy)} (${f0.format(proy / META_VIAJES * 100)} % de la meta)`),
+        el('span', null, ` con ${f0.format(prom)} viajes/día de promedio · avance ${f0.format(last.acc / META_VIAJES * 100)} %` +
+          (falta > 0 && quedan > 0 ? ` · faltan ${f0.format(falta)} viajes en ${quedan} días: ${f0.format(falta / quedan)} por día` : falta <= 0 ? ' · meta alcanzada' : '')));
+    } else info.replaceChildren();
+    const tip = tipFor(box);
+    const bw = n > 1 ? x.step() : W;
+    const byF = new Map(real.map((r) => [r.f, r]));
+    svg.append('g').selectAll('rect').data(dias).join('rect').attr('x', (f) => x(f) - bw / 2).attr('width', bw).attr('y', mt).attr('height', H - mb - mt).style('fill', 'transparent')
+      .on('mousemove', (ev, f) => {
+        const r = byF.get(f), i = dias.indexOf(f);
+        tip.show(ev, `${ruta} · ${fdow(f)} ${fdate(f)}`, [r ? `Real acumulado: ${f0.format(r.acc)} viajes (${f0.format(r.t)} del día)` : 'Sin datos aún', `Meta acumulada: ${f0.format(plan(i))}`]);
+      })
+      .on('mouseleave', () => tip.hide());
+  }
+
+  function drawRutas(box, rutas) {
+    box.replaceChildren(); box.classList.remove('dash-skeleton');
+    const rows = rutas.filter((r) => r.ratio !== null).sort((a, b) => b.ratio - a.ratio);
+    const W = Math.max(300, box.clientWidth), rowH = 32, mt = 4, mb = 24, H = mt + mb + rowH * rows.length;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const probe = svg.append('text').style('font-size', 'var(--cds-font-size-caption)');
+    const labW = d3.max(rows, (r) => { probe.text(r.ruta); return probe.node().getComputedTextLength(); }) + 12;
+    const end = (r) => `${f2.format(r.ratio)} viajes/h · ${f0.format(r.viajes)} viajes${r.ciclo ? ` · ciclo ${f1.format(r.ciclo)} min` : ''}`;
+    const endW = d3.max(rows, (r) => { probe.text(end(r)); return probe.node().getComputedTextLength(); }) + 12;
+    probe.remove();
+    const narrow = W - labW - endW < 120;
+    const x = d3.scaleLinear([0, d3.max(rows, (r) => r.ratio) || 1], [labW, W - (narrow ? 60 : endW)]).nice();
+    const y = d3.scaleBand(rows.map((r) => r.ruta), [mt, H - mb]).padding(.28);
+    svg.append('g').selectAll('line').data(x.ticks(4)).join('line').attr('x1', (d) => x(d)).attr('x2', (d) => x(d)).attr('y1', mt).attr('y2', H - mb).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').attr('transform', `translate(0,${H - mb})`).call(d3.axisBottom(x).ticks(4).tickSize(0).tickFormat((d) => f1.format(d))).call(axisStyle).call((g) => g.selectAll('text').attr('dy', '1.1em'));
+    const g = svg.append('g').selectAll('g').data(rows).join('g');
+    g.append('text').attr('y', (r) => y(r.ruta) + y.bandwidth() / 2).attr('dy', '.35em').style('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)').text((r) => r.ruta);
+    g.append('rect').attr('x', labW).attr('y', (r) => y(r.ruta)).attr('height', y.bandwidth()).attr('width', (r) => Math.max(0, x(r.ratio) - labW)).attr('rx', 4).style('fill', dash.colors[2]);
+    g.append('text').attr('x', (r) => x(r.ratio) + 6).attr('y', (r) => y(r.ruta) + y.bandwidth() / 2).attr('dy', '.35em').style('fill', 'var(--color-fg-muted)')
+      .style('font-size', 'var(--cds-font-size-caption)').text((r) => (narrow ? f2.format(r.ratio) : end(r)));
+    const tip = tipFor(box);
+    g.append('rect').attr('x', 0).attr('width', W).attr('y', (r) => y(r.ruta)).attr('height', y.bandwidth()).style('fill', 'transparent')
+      .on('mousemove', (ev, r) => tip.show(ev, r.ruta, [`${f2.format(r.ratio)} viajes por hora`, `${f0.format(r.viajes)} viajes en ${f1.format(r.horas)} h`, r.ciclo ? `Ciclo promedio ${f1.format(r.ciclo)} min` : 'Sin ciclo registrado']))
+      .on('mouseleave', () => tip.hide());
+  }
+
+  function drawPivot(piv, rutas) {
+    const order = rutas.map((r) => r.ruta);
+    const head = document.getElementById('vj-pivot-head');
+    head.replaceChildren(el('th', 'l', 'Fecha'), el('th', 'l', 'Turno'));
+    head.children[0].dataset.field = 'fecha'; head.children[1].dataset.field = 'turno';
+    order.forEach((r) => { const th = el('th', null, r); th.dataset.field = r; head.appendChild(th); });
+    const tt = el('th', 'tot', 'Total'); tt.dataset.field = 'total'; head.appendChild(tt);
+    const tb = document.querySelector('#vj-pivot tbody');
+    tb.replaceChildren(...piv.map((row) => {
+      const tr = el('tr', row.turno === 'NOCHE' ? 'noche' : null);
+      tr.dataset.key = `${encodeURIComponent(row.fecha)},${encodeURIComponent(row.turno)}`;
+      tr.append(el('td', 'l', row.turno === 'DIA' ? `${fdow(row.fecha)} ${fdate(row.fecha)}` : ''), el('td', 'l', row.turno === 'DIA' ? 'Día' : 'Noche'));
+      order.forEach((r) => { const v = row[r] || 0; tr.appendChild(el('td', v ? null : 'zero', v ? f0.format(v) : '·')); });
+      tr.appendChild(el('td', 'tot' + (row.total ? '' : ' zero'), row.total ? f0.format(row.total) : '·'));
+      return tr;
+    }));
+    const foot = document.getElementById('vj-pivot-foot');
+    foot.replaceChildren(el('td', 'l', 'Total'), el('td', 'l', ''), ...order.map((r) => el('td', null, f0.format(d3.sum(piv, (x) => x[r] || 0)))), el('td', 'tot', f0.format(d3.sum(piv, (x) => x.total))));
+  }
+
+  function drawRanking(rank) {
+    const turno = window.vjTurno;
+    document.getElementById('vj-t-dia').setAttribute('aria-pressed', String(turno === 'DIA'));
+    document.getElementById('vj-t-noche').setAttribute('aria-pressed', String(turno === 'NOCHE'));
+    [['j4tc', 'J4 a TC'], ['tccrf', 'TC a CRF']].forEach(([id, ruta]) => {
+      const rows = rank.filter((r) => r.turno === turno && r.ruta === ruta).sort((a, b) => (b.ratio ?? -1) - (a.ratio ?? -1) || b.viajes - a.viajes);
+      const imax = Math.max(120, d3.max(rows, (r) => r.indice || 0) || 0);
+      const tb = document.querySelector(`#vj-rank-${id} tbody`);
+      tb.replaceChildren(...rows.map((r, i) => {
+        const tr = el('tr'); tr.dataset.key = [r.turno, r.ruta, r.operador].map(encodeURIComponent).join(',');
+        const ind = el('td');
+        if (r.indice !== null) {
+          const bar = el('span', 'bar'); bar.style.width = `${(r.indice / imax) * 60}px`;
+          bar.style.background = r.indice >= 100 ? 'var(--color-ok)' : 'var(--cds-chart-muted)'; ind.append(bar, f0.format(r.indice));
+        } else ind.textContent = '—';
+        tr.append(el('td', 'l pos', String(i + 1)), el('td', 'l', r.operador), el('td', null, r.ratio === null ? '—' : f2.format(r.ratio)), ind,
+          el('td', null, f0.format(r.viajes)), el('td', null, f1.format(r.horas)), el('td', 'vj-hide-sm', f0.format(r.dias)), el('td', 'l vj-hide-sm', r.volquetes));
+        return tr;
+      }));
+    });
+  }
+
+  document.getElementById('vj-t-dia').addEventListener('click', () => { window.vjTurno = 'DIA'; window.vjDraw(); });
+  document.getElementById('vj-t-noche').addEventListener('click', () => { window.vjTurno = 'NOCHE'; window.vjDraw(); });
+
+  window.vjDraw = function () {
+    const V = dash.data('viajes'), P = dash.data('periodo'), R = dash.data('por_ruta'), PV = dash.data('pivot'), RK = dash.data('ranking'), S = dash.data('resumen');
+    const charts = ['vj-rd-j4tc', 'vj-rs-j4tc', 'vj-rd-tccrf', 'vj-rs-tccrf', 'vj-chart-rutas'].map((id) => document.getElementById(id));
+    const ok = [V, P, R, PV, RK, S].every((d) => d.status === 'ok');
+    const bad = [V, P].some((d) => d.status === 'error');
+    if (P.status === 'ok' && P.data.length) {
+      const p = P.data[0];
+      setAll('[data-source="periodo"][data-field="periodo"]', p.periodo); setAll('.vj-ini', fdate(p.inicio)); setAll('.vj-corte', fdate(p.corte));
+    } else setAll('[data-source="periodo"]', '—');
+    const K = dash.data('kpi');
+    if (K.status === 'ok' && K.data.length) {
+      const k0 = K.data[0];
+      setAll('[data-source="kpi"][data-field="dias_info"]', f0.format(k0.dias_info));
+      setAll('[data-source="kpi"][data-field="dias_periodo"]', f0.format(k0.dias_periodo));
+      setAll('.vj-fr', `${fdate(k0.fecha_reporte)}${k0.turno_reporte === 'DIA' ? ' (solo turno día)' : ''}`);
+      const pct = new Intl.NumberFormat('es-PE', { style: 'percent', maximumFractionDigits: 0 });
+      K.data.forEach((k) => {
+        const q = (f) => `[data-source="kpi"][data-where="ruta=${k.ruta}"][data-field="${f}"]`;
+        setAll(q('viajes'), f0.format(k.viajes));
+        setAll(q('meta_fecha'), f0.format(k.meta_fecha));
+        setAll(q('pct_mes'), pct.format(k.pct_mes));
+        setAll(q('cumplimiento'), k.cumplimiento === null ? '—' : pct.format(k.cumplimiento));
+        document.querySelectorAll(q('cumplimiento')).forEach((e) => { e.classList.toggle('up', k.cumplimiento >= 1); e.classList.toggle('down', k.cumplimiento < 1); });
+        setAll(q('ratio_dia'), k.ratio_dia === null ? '—' : f2.format(k.ratio_dia));
+        setAll(q('ratio_prom'), k.ratio_prom === null ? '—' : f2.format(k.ratio_prom));
+        setAll(q('viajes_dia'), f0.format(k.viajes_dia));
+        document.querySelectorAll(q('ratio_dia')).forEach((e) => {
+          const ok = k.ratio_dia !== null && k.ratio_prom !== null;
+          e.classList.toggle('up', ok && k.ratio_dia >= k.ratio_prom); e.classList.toggle('down', ok && k.ratio_dia < k.ratio_prom);
+        });
+      });
+    } else setAll('[data-source="kpi"]', '—');
+    if (S.status === 'ok' && S.data.length) {
+      const s = S.data[0];
+      setAll('[data-source="resumen"][data-field="viajes"]', f0.format(s.viajes));
+      setAll('[data-source="resumen"][data-field="viajes_dia"]', s.viajes_dia === null ? '—' : f0.format(s.viajes_dia));
+      setAll('[data-source="resumen"][data-field="dias"]', f0.format(s.dias));
+      setAll('[data-source="resumen"][data-field="ratio"]', s.ratio === null ? '—' : f2.format(s.ratio));
+      setAll('[data-source="resumen"][data-field="ruta_top"]', s.ruta_top || '—');
+      setAll('[data-source="resumen"][data-field="ruta_top_viajes"]', f0.format(s.ruta_top_viajes));
+    } else setAll('[data-source="resumen"]', '—');
+    if (!ok) {
+      document.querySelector('#vj-pivot tbody').replaceChildren(); document.querySelectorAll('.vj-rank tbody').forEach((t) => t.replaceChildren()); document.getElementById('vj-take-extra').textContent = '';
+      charts.forEach((c) => { if (bad) { c.classList.remove('dash-skeleton'); fail(c); } else { c.replaceChildren(); c.classList.add('dash-skeleton'); } });
+      return;
+    }
+    document.querySelectorAll('.vj-rd-legend').forEach((leg) => leg.replaceChildren(...[['Turno día', TURNO_C.DIA()], ['Turno noche', TURNO_C.NOCHE()]].map(([t, c]) => { const sp = el('span'); const i = el('i'); i.style.background = c; sp.append(i, t); return sp; })));
+    [['j4tc', 'J4 a TC'], ['tccrf', 'TC a CRF']].forEach(([id, ruta]) => {
+      const serie = serieRuta(PV.data, ruta);
+      drawRutaDia(document.getElementById(`vj-rd-${id}`), serie, ruta, document.getElementById(`vj-rdi-${id}`));
+      drawCurvaS(document.getElementById(`vj-rs-${id}`), serie, ruta, P.data[0], document.getElementById(`vj-si-${id}`));
+    });
+    drawRutas(document.getElementById('vj-chart-rutas'), R.data);
+    drawPivot(PV.data, R.data);
+    drawRanking(RK.data);
+    const piv = PV.data, last = piv.filter((r) => r.total > 0).slice(-1)[0];
+    const sinNoche = piv.filter((r) => r.turno === 'NOCHE' && !r.total).length;
+    const best = (t, ruta) => RK.data.filter((r) => r.turno === t && r.ruta === ruta && r.ratio !== null).sort((a, b) => b.ratio - a.ratio)[0];
+    const lider = [['J4 a TC', 'DIA'], ['J4 a TC', 'NOCHE'], ['TC a CRF', 'DIA'], ['TC a CRF', 'NOCHE']].map(([ru, t]) => {
+      const b = best(t, ru); return b ? `${ru} ${t === 'DIA' ? 'día' : 'noche'}: ${b.operador} (${f2.format(b.ratio)} viajes/h)` : null; }).filter(Boolean);
+    document.getElementById('vj-take-extra').textContent =
+      (last ? `Último turno con viajes: ${fdate(last.fecha)} ${last.turno === 'DIA' ? 'día' : 'noche'} (${f0.format(last.total)} viajes). ` : '') +
+      (lider.length ? `Primeros del ranking: ${lider.join('; ')}. ` : '') + (sinNoche ? `${sinNoche} turnos noche sin viajes registrados.` : '');
+  };
+  dash.onData(() => window.vjDraw());
+</script>
+<script>
+  fetch('data/actualizado.json', { cache: 'no-store' }).then((r) => r.json()).then((m) => {
+    document.getElementById('sg-meta').textContent = `Datos de la hoja VOLQUETES_TON del libro HORAS EQUIPOS · actualizado ${m.actualizado}.`;
+  }).catch(() => {});
+</script>
+</body>
+</html>
