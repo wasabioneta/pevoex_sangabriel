@@ -82,6 +82,7 @@
   .vj .vj-sinfo b.neg { color: var(--color-bad); font-weight: 600; }
   .vj .vj-sinfo b.pos { color: var(--color-ok); font-weight: 600; }
   .vj-sub { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: var(--cds-gap-md) 0 var(--cds-gap-xs); }
+  .vj-chart.rf { min-height: 230px; }
   .vj-rank td.pos { font-family: var(--font-anthropic-serif); }
   .vj-rank-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr)); }
   .vj-foot { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; max-width: 95ch; }
@@ -156,6 +157,21 @@
     <p class="vj-note">Viajes ÷ horas de motor de los tramos de esa ruta. Solo cuentan los tramos con horas registradas; un tramo con HM inicial igual al final suma viajes pero no entra al ratio. Al lado: viajes del periodo y ciclo promedio por viaje.</p>
     <div class="vj-chart rutas dash-skeleton" id="vj-chart-rutas" data-source="por_ruta"></div>
   </section>
+
+  <div class="vj-rank-grid" id="ratio-flota">
+    <section class="vj-card" id="ratio-flota-tccrf">
+      <h2>TC a CRF: viajes por hora de la flota, día a día</h2>
+      <p class="vj-note">Viajes ÷ horas de motor de todos los volquetes en la ruta, ambos turnos. Línea punteada: promedio del periodo. Verde: día sobre el promedio; gris: bajo el promedio.</p>
+      <div class="vj-chart rf" id="vj-rf-tccrf" data-source="ratio_flota por_ruta"></div>
+      <p class="vj-sinfo" id="vj-rfi-tccrf"></p>
+    </section>
+    <section class="vj-card" id="ratio-flota-j4tc">
+      <h2>J4 a TC: viajes por hora de la flota, día a día</h2>
+      <p class="vj-note">Viajes ÷ horas de motor de todos los volquetes en la ruta, ambos turnos. Línea punteada: promedio del periodo. Verde: día sobre el promedio; gris: bajo el promedio.</p>
+      <div class="vj-chart rf" id="vj-rf-j4tc" data-source="ratio_flota por_ruta"></div>
+      <p class="vj-sinfo" id="vj-rfi-j4tc"></p>
+    </section>
+  </div>
 
   <section id="ranking">
     <div class="vj-tabs" role="group" aria-label="Turno del ranking">
@@ -306,6 +322,17 @@
                  viajes_dia: d3.sum(hoy, (r) => r.viajes), ratio_dia: h > 0 ? vh / h : null, ratio_prom: prom };
       });
     },
+  });
+  dash.calc('ratio_flota', {
+    inputs: ['viajes'],
+    title: 'Viajes por hora de la flota por día',
+    description: 'Por fecha y ruta (J4 a TC y TC a CRF): viajes de los tramos con horas ÷ horas de motor de esos tramos, sumando todos los volquetes y ambos turnos.',
+    fn: (viajes) => d3.groups(viajes.filter((r) => r.ruta === 'J4 a TC' || r.ruta === 'TC a CRF'), (r) => r.fecha + '|' + r.ruta).map(([k, rs]) => {
+      const [fecha, ruta] = k.split('|');
+      const vh = d3.sum(rs, (r) => r.viajes_con_horas), h = d3.sum(rs, (r) => r.horas_con_viajes);
+      return { fecha, ruta, viajes: d3.sum(rs, (r) => r.viajes), horas: h, ratio: h > 0 ? vh / h : null,
+               volquetes: new Set(rs.map((r) => r.volquete)).size };
+    }).sort((a, b) => a.fecha.localeCompare(b.fecha)),
   });
   dash.calc('resumen', {
     inputs: ['viajes', 'por_ruta'],
@@ -543,6 +570,42 @@
     });
   }
 
+  function drawRatioFlota(box, info, ruta, rows, prom) {
+    box.replaceChildren(); box.classList.remove('dash-skeleton');
+    const serie = rows.filter((r) => r.ruta === ruta && r.ratio !== null);
+    if (!serie.length) { info.textContent = 'Sin tramos con horas registradas en esta ruta.'; return; }
+    const W = Math.max(280, box.clientWidth), H = 230, ml = 34, mt = 16, mb = 30;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const probe = svg.append('text').style('font-size', 'var(--cds-font-size-caption)').text(`Prom. ${f2.format(prom || 0)}`);
+    const mr = probe.node().getComputedTextLength() + 10; probe.remove();
+    const x = d3.scaleBand(serie.map((r) => r.fecha), [ml, W - mr]).padding(.2);
+    const y = d3.scaleLinear([0, Math.max(d3.max(serie, (r) => r.ratio) || 0, prom || 0) * 1.15], [H - mb, mt]).nice();
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', ml).attr('x2', W - mr).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickFormat((d) => f1.format(d))).call(axisStyle).call((g) => g.select('.domain').remove()).call((g) => g.selectAll('text').attr('dx', '-.3em'));
+    const step = Math.max(1, Math.ceil(serie.length / Math.max(1, Math.floor((W - ml - mr) / 44))));
+    svg.append('g').selectAll('text').data(serie.filter((_, i) => i % step === 0)).join('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', H - mb + 16)
+      .attr('text-anchor', 'middle').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text((r) => fdate(r.fecha));
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', H - mb).attr('y2', H - mb).attr('stroke', 'var(--cds-chart-axis)');
+    const up = (r) => prom != null && r.ratio >= prom;
+    const g = svg.append('g').selectAll('g').data(serie).join('g');
+    g.append('rect').attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', (r) => y(r.ratio)).attr('height', (r) => y(0) - y(r.ratio)).attr('rx', 3)
+      .style('fill', (r) => (up(r) ? 'var(--color-ok)' : 'var(--cds-chart-muted)'));
+    if (x.bandwidth() >= 22) g.append('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', (r) => y(r.ratio) - 4).attr('text-anchor', 'middle')
+      .style('fill', 'var(--color-fg-muted)').style('font-size', '10px').text((r) => f1.format(r.ratio));
+    if (prom != null) {
+      svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(prom)).attr('y2', y(prom)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
+      svg.append('text').attr('x', W - mr + 4).attr('y', y(prom)).attr('dy', '.35em').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(`Prom. ${f2.format(prom)}`);
+    }
+    const tip = tipFor(box);
+    g.append('rect').attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', mt).attr('height', H - mb - mt).style('fill', 'transparent')
+      .on('mousemove', (ev, r) => tip.show(ev, `${ruta} · ${fdow(r.fecha)} ${fdate(r.fecha)}`, [`${f2.format(r.ratio)} viajes por hora`,
+        `${f0.format(r.viajes)} viajes en ${f1.format(r.horas)} h · ${r.volquetes} volquetes`, prom != null ? `${up(r) ? 'Sobre' : 'Bajo'} el promedio (${f2.format(prom)})` : '']))
+      .on('mouseleave', () => tip.hide());
+    const best = serie.reduce((a, b) => (b.ratio > a.ratio ? b : a)), worst = serie.reduce((a, b) => (b.ratio < a.ratio ? b : a));
+    const ult = serie[serie.length - 1], sobre = serie.filter(up).length;
+    info.textContent = `Promedio del periodo ${prom != null ? f2.format(prom) : '—'} viajes/h · último día (${fdate(ult.fecha)}) ${f2.format(ult.ratio)} · mejor ${fdate(best.fecha)} ${f2.format(best.ratio)} · más bajo ${fdate(worst.fecha)} ${f2.format(worst.ratio)} · ${sobre} de ${serie.length} días sobre el promedio.`;
+  }
+
   document.getElementById('vj-t-dia').addEventListener('click', () => { window.vjTurno = 'DIA'; window.vjDraw(); });
   document.getElementById('vj-t-noche').addEventListener('click', () => { window.vjTurno = 'NOCHE'; window.vjDraw(); });
 
@@ -601,6 +664,12 @@
     drawRutas(document.getElementById('vj-chart-rutas'), R.data);
     drawPivot(PV.data, R.data);
     drawRanking(RK.data);
+    const RF = dash.data('ratio_flota');
+    if (RF.status === 'ok') {
+      const promR = (ru) => (R.data.find((r) => r.ruta === ru) || {}).ratio ?? null;
+      drawRatioFlota(document.getElementById('vj-rf-tccrf'), document.getElementById('vj-rfi-tccrf'), 'TC a CRF', RF.data, promR('TC a CRF'));
+      drawRatioFlota(document.getElementById('vj-rf-j4tc'), document.getElementById('vj-rfi-j4tc'), 'J4 a TC', RF.data, promR('J4 a TC'));
+    }
     const piv = PV.data, last = piv.filter((r) => r.total > 0).slice(-1)[0];
     const sinNoche = piv.filter((r) => r.turno === 'NOCHE' && !r.total).length;
     const best = (t, ruta) => RK.data.filter((r) => r.turno === t && r.ruta === ruta && r.ratio !== null).sort((a, b) => b.ratio - a.ratio)[0];
