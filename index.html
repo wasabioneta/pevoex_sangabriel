@@ -170,14 +170,14 @@
 
   <div class="vj-rank-grid" id="ratio-flota">
     <section class="vj-card" id="ratio-flota-tccrf">
-      <h2>TC a CRF: viajes por hora de la flota, día a día</h2>
-      <p class="vj-note">Viajes ÷ horas de motor de todos los volquetes en la ruta, ambos turnos. Línea punteada: promedio del periodo. Verde: día sobre el promedio; gris: bajo el promedio.</p>
+      <h2>TC a CRF: viajes por hora de la flota, día y noche</h2>
+      <p class="vj-note">Viajes ÷ horas de horómetro del motor de todos los volquetes en la ruta, por turno: una barra para el turno día y otra para el noche, con los mismos colores de turno que el resto del tablero. Líneas punteadas: promedio del periodo de cada turno.</p>
       <div class="vj-chart rf" id="vj-rf-tccrf" data-source="ratio_flota por_ruta"></div>
       <p class="vj-sinfo" id="vj-rfi-tccrf"></p>
     </section>
     <section class="vj-card" id="ratio-flota-j4tc">
-      <h2>J4 a TC: viajes por hora de la flota, día a día</h2>
-      <p class="vj-note">Viajes ÷ horas de motor de todos los volquetes en la ruta, ambos turnos. Línea punteada: promedio del periodo. Verde: día sobre el promedio; gris: bajo el promedio.</p>
+      <h2>J4 a TC: viajes por hora de la flota, día y noche</h2>
+      <p class="vj-note">Viajes ÷ horas de horómetro del motor de todos los volquetes en la ruta, por turno: una barra para el turno día y otra para el noche, con los mismos colores de turno que el resto del tablero. Líneas punteadas: promedio del periodo de cada turno.</p>
       <div class="vj-chart rf" id="vj-rf-j4tc" data-source="ratio_flota por_ruta"></div>
       <p class="vj-sinfo" id="vj-rfi-j4tc"></p>
     </section>
@@ -350,14 +350,14 @@
   });
   dash.calc('ratio_flota', {
     inputs: ['viajes'],
-    title: 'Viajes por hora de la flota por día',
-    description: 'Por fecha y ruta (J4 a TC y TC a CRF): viajes de los tramos con horas ÷ horas de motor de esos tramos, sumando todos los volquetes y ambos turnos.',
-    fn: (viajes) => d3.groups(viajes.filter((r) => r.ruta === 'J4 a TC' || r.ruta === 'TC a CRF'), (r) => r.fecha + '|' + r.ruta).map(([k, rs]) => {
-      const [fecha, ruta] = k.split('|');
+    title: 'Viajes por hora de la flota por día y turno',
+    description: 'Por fecha, turno y ruta (J4 a TC y TC a CRF): viajes de los tramos con horas ÷ horas de horómetro del motor de esos tramos, sumando todos los volquetes del turno. ratio_flota_turno',
+    fn: (viajes) => d3.groups(viajes.filter((r) => r.ruta === 'J4 a TC' || r.ruta === 'TC a CRF'), (r) => r.fecha + '|' + r.turno + '|' + r.ruta).map(([k, rs]) => {
+      const [fecha, turno, ruta] = k.split('|');
       const vh = d3.sum(rs, (r) => r.viajes_con_horas), h = d3.sum(rs, (r) => r.horas_con_viajes);
-      return { fecha, ruta, viajes: d3.sum(rs, (r) => r.viajes), horas: h, ratio: h > 0 ? vh / h : null,
+      return { fecha, turno, ruta, viajes: d3.sum(rs, (r) => r.viajes), viajes_con_horas: vh, horas: h, ratio: h > 0 ? vh / h : null,
                volquetes: new Set(rs.map((r) => r.volquete)).size };
-    }).sort((a, b) => a.fecha.localeCompare(b.fecha)),
+    }).sort((a, b) => a.fecha.localeCompare(b.fecha) || a.turno.localeCompare(b.turno)),
   });
   dash.calc('flota_dia', {
     inputs: ['viajes', 'periodo'],
@@ -632,50 +632,55 @@
     });
   }
 
-  function drawRatioFlota(box, info, ruta, rows, prom) {
+  function drawRatioFlota(box, info, ruta, rows) {
     box.replaceChildren(); box.classList.remove('dash-skeleton');
+    const cD = TURNO_C.DIA(), cN = TURNO_C.NOCHE(), T = ['DIA', 'NOCHE'];
     const serie = rows.filter((r) => r.ruta === ruta && r.ratio !== null);
     if (!serie.length) { info.textContent = 'Sin tramos con horas registradas en esta ruta.'; return; }
-    const W = Math.max(280, box.clientWidth), H = 230, ml = 34, mt = 16, mb = 30;
+    const prom = {};
+    T.forEach((t) => { const q = serie.filter((r) => r.turno === t), h = d3.sum(q, (r) => r.horas); prom[t] = h > 0 ? d3.sum(q, (r) => r.viajes_con_horas) / h : null; });
+    const fechas = Array.from(new Set(serie.map((r) => r.fecha))).sort();
+    const get = (f, t) => serie.find((r) => r.fecha === f && r.turno === t);
+    const W = Math.max(300, box.clientWidth), H = 250, ml = 34, mt = 18, mb = 30;
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
-    const probe = svg.append('text').style('font-size', 'var(--cds-font-size-caption)').text(`Prom. ${f2.format(prom || 0)}`);
+    const probe = svg.append('text').style('font-size', 'var(--cds-font-size-caption)').text('Prom. noche 0.00');
     const mr = probe.node().getComputedTextLength() + 10; probe.remove();
-    const x = d3.scaleBand(serie.map((r) => r.fecha), [ml, W - mr]).padding(.2);
-    const y = d3.scaleLinear([0, Math.max(d3.max(serie, (r) => r.ratio) || 0, prom || 0) * 1.15], [H - mb, mt]).nice();
+    const x = d3.scaleBand(fechas, [ml, W - mr]).paddingInner(.22).paddingOuter(.1);
+    const xs = d3.scaleBand(T, [0, x.bandwidth()]).padding(.08);
+    const y = d3.scaleLinear([0, Math.max(d3.max(serie, (r) => r.ratio) || 0, prom.DIA || 0, prom.NOCHE || 0) * 1.15], [H - mb, mt]).nice();
     svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', ml).attr('x2', W - mr).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--cds-chart-grid)');
     svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickFormat((d) => f1.format(d))).call(axisStyle).call((g) => g.select('.domain').remove()).call((g) => g.selectAll('text').attr('dx', '-.3em'));
-    const step = Math.max(1, Math.ceil(serie.length / Math.max(1, Math.floor((W - ml - mr) / 44))));
-    svg.append('g').selectAll('text').data(serie.filter((_, i) => i % step === 0)).join('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', H - mb + 16)
-      .attr('text-anchor', 'middle').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text((r) => fdate(r.fecha));
+    const step = Math.max(1, Math.ceil(fechas.length / Math.max(1, Math.floor((W - ml - mr) / 44))));
+    svg.append('g').selectAll('text').data(fechas.filter((_, i) => i % step === 0)).join('text').attr('x', (f) => x(f) + x.bandwidth() / 2).attr('y', H - mb + 16)
+      .attr('text-anchor', 'middle').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(fdate);
     svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', H - mb).attr('y2', H - mb).attr('stroke', 'var(--cds-chart-axis)');
-    const up = (r) => prom != null && r.ratio >= prom;
     const g = svg.append('g').selectAll('g').data(serie).join('g');
-    g.append('rect').attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', (r) => y(r.ratio)).attr('height', (r) => y(0) - y(r.ratio)).attr('rx', 3)
-      .style('fill', (r) => (up(r) ? 'var(--color-ok)' : 'var(--cds-chart-muted)'));
-    // etiqueta en todas las barras: horizontal encima si cabe; si la barra es angosta, vertical dentro de la barra
-    if (x.bandwidth() >= 26) {
-      g.append('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', (r) => y(r.ratio) - 4).attr('text-anchor', 'middle')
-        .style('fill', 'var(--color-fg)').style('font-size', '10px').style('font-weight', 600).text((r) => f2.format(r.ratio));
+    const bx = (r) => x(r.fecha) + xs(r.turno), bw = xs.bandwidth();
+    g.append('rect').attr('x', bx).attr('width', bw).attr('y', (r) => y(r.ratio)).attr('height', (r) => y(0) - y(r.ratio)).attr('rx', 2)
+      .style('fill', (r) => (r.turno === 'DIA' ? cD : cN));
+    // etiqueta en todas las barras
+    const fsz = `${Math.max(7, Math.min(10, bw - 1))}px`;
+    if (bw >= 22) {
+      g.append('text').attr('x', (r) => bx(r) + bw / 2).attr('y', (r) => y(r.ratio) - 3).attr('text-anchor', 'middle').style('fill', 'var(--color-fg)').style('font-size', fsz).style('font-weight', 600).text((r) => f2.format(r.ratio));
     } else {
-      g.append('text').attr('transform', (r) => {
-        const inside = y(0) - y(r.ratio) > 30;
-        return `translate(${x(r.fecha) + x.bandwidth() / 2},${inside ? y(r.ratio) + 4 : y(r.ratio) - 4}) rotate(-90)`;
-      }).attr('dy', '.35em').attr('text-anchor', (r) => (y(0) - y(r.ratio) > 30 ? 'end' : 'start'))
-        .style('fill', (r) => (y(0) - y(r.ratio) > 30 ? (up(r) ? 'var(--color-bg)' : 'var(--color-fg)') : 'var(--color-fg)'))
-        .style('font-size', `${Math.max(8, Math.min(10, x.bandwidth() - 2))}px`).style('font-weight', 600).text((r) => f2.format(r.ratio));
+      g.append('text').attr('transform', (r) => `translate(${bx(r) + bw / 2},${y(0) - y(r.ratio) > 28 ? y(r.ratio) + 3 : y(r.ratio) - 3}) rotate(-90)`)
+        .attr('dy', '.35em').attr('text-anchor', (r) => (y(0) - y(r.ratio) > 28 ? 'end' : 'start'))
+        .style('fill', (r) => (y(0) - y(r.ratio) > 28 ? 'var(--color-bg)' : 'var(--color-fg)')).style('font-size', fsz).style('font-weight', 600).text((r) => f2.format(r.ratio));
     }
-    if (prom != null) {
-      svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(prom)).attr('y2', y(prom)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
-      svg.append('text').attr('x', W - mr + 4).attr('y', y(prom)).attr('dy', '.35em').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(`Prom. ${f2.format(prom)}`);
-    }
+    const close = prom.DIA != null && prom.NOCHE != null && Math.abs(y(prom.DIA) - y(prom.NOCHE)) < 14;
+    [['DIA', cD, 'Prom. día'], ['NOCHE', cN, 'Prom. noche']].forEach(([t, c, txt]) => {
+      if (prom[t] == null) return;
+      const other = t === 'DIA' ? 'NOCHE' : 'DIA', dy = close ? (prom[t] >= prom[other] ? -7 : 7) : 0;
+      svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(prom[t])).attr('y2', y(prom[t])).attr('stroke', c).attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
+      svg.append('text').attr('x', W - mr + 4).attr('y', y(prom[t]) + dy).attr('dy', '.35em').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(`${txt} ${f2.format(prom[t])}`);
+    });
     const tip = tipFor(box);
-    g.append('rect').attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', mt).attr('height', H - mb - mt).style('fill', 'transparent')
-      .on('mousemove', (ev, r) => tip.show(ev, `${ruta} · ${fdow(r.fecha)} ${fdate(r.fecha)}`, [`${f2.format(r.ratio)} viajes por hora`,
-        `${f0.format(r.viajes)} viajes en ${f1.format(r.horas)} h · ${r.volquetes} volquetes`, prom != null ? `${up(r) ? 'Sobre' : 'Bajo'} el promedio (${f2.format(prom)})` : '']))
-      .on('mouseleave', () => tip.hide());
-    const best = serie.reduce((a, b) => (b.ratio > a.ratio ? b : a)), worst = serie.reduce((a, b) => (b.ratio < a.ratio ? b : a));
-    const ult = serie[serie.length - 1], sobre = serie.filter(up).length;
-    info.textContent = `Promedio del periodo ${prom != null ? f2.format(prom) : '—'} viajes/h · último día (${fdate(ult.fecha)}) ${f2.format(ult.ratio)} · mejor ${fdate(best.fecha)} ${f2.format(best.ratio)} · más bajo ${fdate(worst.fecha)} ${f2.format(worst.ratio)} · ${sobre} de ${serie.length} días sobre el promedio.`;
+    svg.append('g').selectAll('rect').data(fechas).join('rect').attr('x', (f) => x(f)).attr('width', x.bandwidth()).attr('y', mt).attr('height', H - mb - mt).style('fill', 'transparent')
+      .on('mousemove', (ev, f) => tip.show(ev, `${ruta} · ${fdow(f)} ${fdate(f)}`, T.map((t) => {
+        const r = get(f, t); return r ? `${t === 'DIA' ? 'Día' : 'Noche'}: ${f2.format(r.ratio)} viajes/h (${f0.format(r.viajes)} viajes en ${f1.format(r.horas)} h, ${r.volquetes} volquetes)` : `${t === 'DIA' ? 'Día' : 'Noche'}: sin viajes`;
+      }))).on('mouseleave', () => tip.hide());
+    const nD = serie.filter((r) => r.turno === 'DIA').length, nN = serie.filter((r) => r.turno === 'NOCHE').length;
+    info.textContent = `Promedio de día ${prom.DIA != null ? f2.format(prom.DIA) : '—'} viajes/h (${nD} turnos) · promedio de noche ${prom.NOCHE != null ? f2.format(prom.NOCHE) : '—'} viajes/h (${nN} turnos). Promedio = viajes del turno ÷ horas de horómetro de todos los turnos de ese tipo.`;
   }
 
   function drawFlota(box, info, rows) {
@@ -835,8 +840,8 @@
     const RF = dash.data('ratio_flota');
     if (RF.status === 'ok') {
       const promR = (ru) => (R.data.find((r) => r.ruta === ru) || {}).ratio ?? null;
-      drawRatioFlota(document.getElementById('vj-rf-tccrf'), document.getElementById('vj-rfi-tccrf'), 'TC a CRF', RF.data, promR('TC a CRF'));
-      drawRatioFlota(document.getElementById('vj-rf-j4tc'), document.getElementById('vj-rfi-j4tc'), 'J4 a TC', RF.data, promR('J4 a TC'));
+      drawRatioFlota(document.getElementById('vj-rf-tccrf'), document.getElementById('vj-rfi-tccrf'), 'TC a CRF', RF.data);
+      drawRatioFlota(document.getElementById('vj-rf-j4tc'), document.getElementById('vj-rfi-j4tc'), 'J4 a TC', RF.data);
     }
     const piv = PV.data, last = piv.filter((r) => r.total > 0).slice(-1)[0];
     const sinNoche = piv.filter((r) => r.turno === 'NOCHE' && !r.total).length;
