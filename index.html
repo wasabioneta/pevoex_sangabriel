@@ -84,6 +84,7 @@
   .vj-sub { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: var(--cds-gap-md) 0 var(--cds-gap-xs); }
   .vj-chart.rf { min-height: 230px; }
   .vj-chart.fl { min-height: 250px; }
+  .vj-chart.ex { min-height: 290px; }
   .vj-rank td.pos { font-family: var(--font-anthropic-serif); }
   .vj-rank-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr)); }
   .vj-foot { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; max-width: 95ch; }
@@ -179,6 +180,21 @@
       <p class="vj-note">Viajes ÷ horas de motor de todos los volquetes en la ruta, ambos turnos. Línea punteada: promedio del periodo. Verde: día sobre el promedio; gris: bajo el promedio.</p>
       <div class="vj-chart rf" id="vj-rf-j4tc" data-source="ratio_flota por_ruta"></div>
       <p class="vj-sinfo" id="vj-rfi-j4tc"></p>
+    </section>
+  </div>
+
+  <div class="vj-rank-grid" id="exclusivos">
+    <section class="vj-card" id="excl-j4tc">
+      <h2>J4 a TC: turnos dedicados solo a esta ruta</h2>
+      <p class="vj-note">Solo turnos en los que el volquete hizo viajes únicamente en esta ruta: así sus horas son el horómetro del motor del turno completo, sin repartir entre rutas. Barras: viajes del día. Debajo de cada fecha: volquetes que lo hicieron, horas de horómetro sumando todos y viajes por hora.</p>
+      <div class="vj-chart ex" id="vj-ex-j4tc" data-source="exclusivo"></div>
+      <p class="vj-sinfo" id="vj-exi-j4tc"></p>
+    </section>
+    <section class="vj-card" id="excl-tccrf">
+      <h2>TC a CRF: turnos dedicados solo a esta ruta</h2>
+      <p class="vj-note">Solo turnos en los que el volquete hizo viajes únicamente en esta ruta: así sus horas son el horómetro del motor del turno completo, sin repartir entre rutas. Barras: viajes del día. Debajo de cada fecha: volquetes que lo hicieron, horas de horómetro sumando todos y viajes por hora.</p>
+      <div class="vj-chart ex" id="vj-ex-tccrf" data-source="exclusivo"></div>
+      <p class="vj-sinfo" id="vj-exi-tccrf"></p>
     </section>
   </div>
 
@@ -357,6 +373,27 @@
                    volquetes_dia: dia.join(', '), volquetes_noche: noche.join(', ') });
       }
       return out;
+    },
+  });
+  dash.calc('exclusivo', {
+    inputs: ['viajes'],
+    title: 'Turnos de una sola ruta',
+    description: 'Turnos de volquete en los que todos sus viajes fueron de una misma ruta (J4 a TC o TC a CRF), por fecha: viajes, volquetes, horas de horómetro del motor sumadas y viajes por hora. Sin horómetros intermedios estimados.',
+    fn: (viajes) => {
+      const turnos = d3.groups(viajes, (r) => r.fecha + '|' + r.turno + '|' + r.volquete);
+      const out = new Map();
+      turnos.forEach(([k, rs]) => {
+        const ruta = rs[0].ruta;
+        if (!(ruta === 'J4 a TC' || ruta === 'TC a CRF') || !rs.every((r) => r.ruta === ruta)) return;
+        const [fecha, turno, volquete] = k.split('|'), key = fecha + '|' + ruta;
+        const o = out.get(key) || { fecha, ruta, viajes: 0, horas: 0, viajes_con_horas: 0, volquetes: 0, detalle: [] };
+        const v = d3.sum(rs, (r) => r.viajes), h = d3.sum(rs, (r) => r.horas_con_viajes);
+        o.viajes += v; o.horas += h; o.viajes_con_horas += d3.sum(rs, (r) => r.viajes_con_horas); o.volquetes += 1;
+        o.detalle.push(`${volquete} ${turno === 'DIA' ? 'día' : 'noche'}: ${v} viajes en ${Math.round(h * 100) / 100} h`);
+        out.set(key, o);
+      });
+      return Array.from(out.values()).map((o) => ({ ...o, ratio: o.horas > 0 ? o.viajes_con_horas / o.horas : null, detalle: o.detalle.join(' · ') }))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha));
     },
   });
   dash.calc('resumen', {
@@ -693,6 +730,43 @@
     info.textContent = con.length ? `Promedio en ${con.length} días con reporte: ${f1.format(promD)} volquetes de día y ${f1.format(promN)} de noche (${f1.format(promD + promN)} turnos-volquete por día) · máximo de día ${maxD.dia} (${fdate(maxD.fecha)}) · máximo de noche ${maxN.noche} (${fdate(maxN.fecha)}).` : '';
   }
 
+  function drawExclusivo(box, info, ruta, rows) {
+    box.replaceChildren(); box.classList.remove('dash-skeleton');
+    const serie = rows.filter((r) => r.ruta === ruta);
+    if (!serie.length) { info.textContent = 'No hubo turnos dedicados solo a esta ruta.'; return; }
+    const W = Math.max(300, box.clientWidth), ml = 58, mr = 8, mt = 20, plotH = 170, filas = ['Volquetes', 'Horas', 'Viajes/h'], fh = 18;
+    const H = mt + plotH + 22 + filas.length * fh + 6;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const x = d3.scaleBand(serie.map((r) => r.fecha), [ml, W - mr]).padding(.22);
+    const y = d3.scaleLinear([0, (d3.max(serie, (r) => r.viajes) || 1) * 1.15], [mt + plotH, mt]).nice();
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', ml).attr('x2', W - mr).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickFormat((d) => f0.format(d))).call(axisStyle).call((g) => g.select('.domain').remove()).call((g) => g.selectAll('text').attr('dx', '-.3em'));
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', mt + plotH).attr('y2', mt + plotH).attr('stroke', 'var(--cds-chart-axis)');
+    const g = svg.append('g').selectAll('g').data(serie).join('g');
+    g.append('rect').attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', (r) => y(r.viajes)).attr('height', (r) => y(0) - y(r.viajes)).attr('rx', 3).style('fill', dash.colors[2]);
+    const fsz = `${Math.max(8, Math.min(11, x.bandwidth() / 2.6))}px`;
+    g.append('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', (r) => y(r.viajes) - 4).attr('text-anchor', 'middle').style('fill', 'var(--color-fg)')
+      .style('font-size', fsz).style('font-weight', 600).text((r) => f0.format(r.viajes));
+    // fechas y tabla bajo el eje
+    const y0 = mt + plotH;
+    g.append('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', y0 + 15).attr('text-anchor', 'middle').style('fill', 'var(--color-fg-muted)').style('font-size', fsz).text((r) => fdate(r.fecha));
+    const vals = [(r) => f0.format(r.volquetes), (r) => f1.format(r.horas), (r) => (r.ratio === null ? '—' : f2.format(r.ratio))];
+    filas.forEach((nombre, i) => {
+      const yy = y0 + 22 + (i + 1) * fh - 5;
+      svg.append('line').attr('x1', 0).attr('x2', W - mr).attr('y1', yy - fh + 5).attr('y2', yy - fh + 5).attr('stroke', 'var(--color-border-line)');
+      svg.append('text').attr('x', 0).attr('y', yy).style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(nombre);
+      g.append('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', yy).attr('text-anchor', 'middle').style('fill', 'var(--color-fg)').style('font-size', fsz)
+        .style('font-weight', i === 2 ? 600 : 400).text(vals[i]);
+    });
+    const tip = tipFor(box);
+    g.append('rect').attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', mt).attr('height', H - mt).style('fill', 'transparent')
+      .on('mousemove', (ev, r) => tip.show(ev, `${ruta} · ${fdow(r.fecha)} ${fdate(r.fecha)}`, [`${f0.format(r.viajes)} viajes · ${r.volquetes} volquetes · ${f1.format(r.horas)} h`,
+        `${r.ratio === null ? '—' : f2.format(r.ratio)} viajes por hora`, ...r.detalle.split(' · ')]))
+      .on('mouseleave', () => tip.hide());
+    const tv = d3.sum(serie, (r) => r.viajes), th = d3.sum(serie, (r) => r.horas), tvh = d3.sum(serie, (r) => r.viajes_con_horas), tq = d3.sum(serie, (r) => r.volquetes);
+    info.textContent = `${serie.length} fechas · ${tq} turnos-volquete dedicados · ${f0.format(tv)} viajes en ${f1.format(th)} h de horómetro · ${th > 0 ? f2.format(tvh / th) : '—'} viajes por hora · ${f1.format(tv / tq)} viajes por volquete y turno.`;
+  }
+
   document.getElementById('vj-t-dia').addEventListener('click', () => { window.vjTurno = 'DIA'; window.vjDraw(); });
   document.getElementById('vj-t-noche').addEventListener('click', () => { window.vjTurno = 'NOCHE'; window.vjDraw(); });
 
@@ -751,6 +825,11 @@
     drawRutas(document.getElementById('vj-chart-rutas'), R.data);
     drawPivot(PV.data, R.data);
     drawRanking(RK.data);
+    const EX = dash.data('exclusivo');
+    if (EX.status === 'ok') {
+      drawExclusivo(document.getElementById('vj-ex-j4tc'), document.getElementById('vj-exi-j4tc'), 'J4 a TC', EX.data);
+      drawExclusivo(document.getElementById('vj-ex-tccrf'), document.getElementById('vj-exi-tccrf'), 'TC a CRF', EX.data);
+    }
     const FL = dash.data('flota_dia');
     if (FL.status === 'ok') drawFlota(document.getElementById('vj-fl'), document.getElementById('vj-fl-info'), FL.data);
     const RF = dash.data('ratio_flota');
