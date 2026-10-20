@@ -590,8 +590,18 @@
     const g = svg.append('g').selectAll('g').data(serie).join('g');
     g.append('rect').attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', (r) => y(r.ratio)).attr('height', (r) => y(0) - y(r.ratio)).attr('rx', 3)
       .style('fill', (r) => (up(r) ? 'var(--color-ok)' : 'var(--cds-chart-muted)'));
-    if (x.bandwidth() >= 22) g.append('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', (r) => y(r.ratio) - 4).attr('text-anchor', 'middle')
-      .style('fill', 'var(--color-fg-muted)').style('font-size', '10px').text((r) => f1.format(r.ratio));
+    // etiqueta en todas las barras: horizontal encima si cabe; si la barra es angosta, vertical dentro de la barra
+    if (x.bandwidth() >= 26) {
+      g.append('text').attr('x', (r) => x(r.fecha) + x.bandwidth() / 2).attr('y', (r) => y(r.ratio) - 4).attr('text-anchor', 'middle')
+        .style('fill', 'var(--color-fg)').style('font-size', '10px').style('font-weight', 600).text((r) => f2.format(r.ratio));
+    } else {
+      g.append('text').attr('transform', (r) => {
+        const inside = y(0) - y(r.ratio) > 30;
+        return `translate(${x(r.fecha) + x.bandwidth() / 2},${inside ? y(r.ratio) + 4 : y(r.ratio) - 4}) rotate(-90)`;
+      }).attr('dy', '.35em').attr('text-anchor', (r) => (y(0) - y(r.ratio) > 30 ? 'end' : 'start'))
+        .style('fill', (r) => (y(0) - y(r.ratio) > 30 ? (up(r) ? 'var(--color-bg)' : 'var(--color-fg)') : 'var(--color-fg)'))
+        .style('font-size', `${Math.max(8, Math.min(10, x.bandwidth() - 2))}px`).style('font-weight', 600).text((r) => f2.format(r.ratio));
+    }
     if (prom != null) {
       svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(prom)).attr('y2', y(prom)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
       svg.append('text').attr('x', W - mr + 4).attr('y', y(prom)).attr('dy', '.35em').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(`Prom. ${f2.format(prom)}`);
