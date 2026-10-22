@@ -38,6 +38,7 @@
 <body>
 <div id="dash-root">
 <p class="sg-meta" id="sg-meta">Datos de la hoja VOLQUETES_TON del libro HORAS EQUIPOS.</p>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;600&family=Fira+Sans:wght@400;500;600&display=swap">
 <style>
   .vj { display: grid; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); }
   .vj-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
@@ -93,10 +94,35 @@
   [data-dash-source-state=empty] { color: transparent; }
   [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
   @media (max-width: 640px) { .vj-hide-sm { display: none; } }
+
+  .vj { font-family: 'Fira Sans', var(--font-anthropic-sans), sans-serif; }
+  .vj-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--cds-gap-sm) var(--cds-gap-lg); }
+  .vj-head > div { min-width: 0; flex: 1 1 32rem; }
+  .vj-head h1 { font-family: 'Fira Sans', var(--font-anthropic-sans), sans-serif; font-weight: 600; letter-spacing: -.01em; }
+  .vj-badge { display: inline-flex; align-items: center; gap: 6px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); border: 1px solid var(--color-border-line); border-radius: 999px; padding: 4px 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .vj-badge i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--color-ok); display: inline-block; }
+  .vj-nav { position: sticky; top: 0; z-index: 3; display: flex; gap: 6px; overflow-x: auto; padding: var(--cds-gap-xs) 0; background: var(--color-bg); border-bottom: 1px solid var(--color-border-line); scrollbar-width: thin; }
+  .vj-nav a { flex: none; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); text-decoration: none; padding: 6px 12px; border-radius: 999px; border: 1px solid transparent; min-height: 32px; display: inline-flex; align-items: center; transition: background-color .15s, color .15s; }
+  .vj-nav a:hover { color: var(--color-fg); background: color-mix(in srgb, var(--color-fg) 6%, transparent); }
+  .vj-nav a[aria-current=true] { color: var(--color-bg); background: var(--color-fg); }
+  .vj-nav a:focus-visible, .vj a:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+  .vj section[id], .vj div[id] { scroll-margin-top: 3.5rem; }
+  .vj-tile { position: relative; overflow: hidden; border-top: 3px solid var(--color-border-line); }
+  .vj-tile:has(.vj-cump.up) { border-top-color: var(--color-ok); }
+  .vj-tile:has(.vj-cump.down) { border-top-color: var(--color-bad); }
+  .vj-tile .lbl { text-transform: uppercase; letter-spacing: .04em; font-weight: 500; }
+  .vj-tile .num { font-family: 'Fira Code', ui-monospace, monospace; font-weight: 600; letter-spacing: -.02em; }
+  .vj-card h2 { display: flex; align-items: center; gap: 10px; }
+  .vj-card h2::before { content: ""; width: 4px; height: 1.1em; border-radius: 2px; background: var(--color-fg); opacity: .8; flex: none; }
+  .vj-table tbody tr:hover td { background: color-mix(in srgb, var(--color-fg) 7%, var(--color-panel)); }
+  .vj-table td, .vj-table th { font-family: 'Fira Sans', var(--font-anthropic-sans), sans-serif; }
+  .vj-group { font-size: var(--cds-font-size-caption); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--color-fg-muted); margin: var(--cds-gap-sm) 0 calc(-1 * var(--cds-gap-sm)); }
+  @media (prefers-reduced-motion: reduce) { .vj *, .vj *::before { transition: none !important; animation: none !important; } }
 </style>
 
 <div class="vj">
   <header class="vj-head" id="resumen">
+    <div>
     <h1>Viajes de volquetes · periodo valorizable <span data-source="periodo" data-field="periodo" data-row="0" class="dash-skeleton">—</span></h1>
     <p class="vj-take" id="vj-take">
       <b data-source="resumen" data-field="viajes" data-row="0" class="dash-skeleton">—</b> viajes hasta el
@@ -104,7 +130,13 @@
       <b data-source="resumen" data-field="ratio" data-row="0" class="dash-skeleton">—</b> viajes por hora de motor.
       <span id="vj-take-extra"></span>
     </p>
+    </div>
+    <span class="vj-badge" title="Último día con reporte cargado"><i aria-hidden="true"></i>Datos al <span class="vj-corte" data-source="periodo" data-field="corte" data-row="0">—</span></span>
   </header>
+
+  <nav class="vj-nav" aria-label="Secciones del tablero">
+    <a href="#indicadores">Indicadores</a><a href="#viajes-dia">Viajes por día</a><a href="#flota-dia">Flota</a><a href="#detalle-rutas">Detalle por ruta</a><a href="#ratio-rutas">Viajes/h por ruta</a><a href="#ratio-flota">Viajes/h de la flota</a><a href="#exclusivos">Turnos dedicados</a><a href="#ranking">Ranking</a>
+  </nav>
 
   <section class="vj-tiles" id="indicadores">
     <div class="vj-tile"><div class="lbl">Días con información</div><div class="num"><span data-source="kpi" data-row="0" data-field="dias_info">—</span> <span class="vj-de">de <span data-source="kpi" data-row="0" data-field="dias_periodo">—</span></span></div>
@@ -119,6 +151,7 @@
       <div class="sub">Promedio del periodo <span data-source="kpi" data-where="ruta=TC a CRF" data-field="ratio_prom">—</span> · <span data-source="kpi" data-where="ruta=TC a CRF" data-field="viajes_dia">—</span> viajes ese día</div></div>
   </section>
 
+  <p class="vj-group">Producción</p>
   <div class="vj-rank-grid" id="viajes-dia">
     <section class="vj-card" id="viajes-j4tc">
       <h2>J4 a TC: viajes por día y turno</h2>
@@ -162,6 +195,7 @@
     </div>
   </section>
 
+  <p class="vj-group">Productividad: viajes por hora</p>
   <section class="vj-card" id="ratio-rutas">
     <h2>Viajes por hora según ruta</h2>
     <p class="vj-note">Viajes ÷ horas de motor de los tramos de esa ruta. Solo cuentan los tramos con horas registradas; un tramo con HM inicial igual al final suma viajes pero no entra al ratio. Al lado: viajes del periodo y ciclo promedio por viaje.</p>
@@ -198,6 +232,7 @@
     </section>
   </div>
 
+  <p class="vj-group">Operadores</p>
   <section id="ranking">
     <div class="vj-tabs" role="group" aria-label="Turno del ranking">
       <button type="button" id="vj-t-dia" aria-pressed="true">Turno día</button>
@@ -247,6 +282,8 @@
 
   <p class="vj-foot">Fuente: hoja VOLQUETES_TON del libro HORAS EQUIPOS (N° VIAJES, ORIGEN, DESTINO, HM y CICLO PROM.). Se actualiza todos los días a las 10:30.</p>
 </div>
+
+
 
 
 
@@ -859,6 +896,17 @@
       (lider.length ? `Primeros del ranking: ${lider.join('; ')}. ` : '') + (sinNoche ? `${sinNoche} turnos noche sin viajes registrados.` : '');
   };
   dash.onData(() => window.vjDraw());
+</script>
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('.vj-nav a'));
+  if(!('IntersectionObserver' in window)||!links.length) return;
+  var map={}; links.forEach(function(a){ var el=document.getElementById(a.getAttribute('href').slice(1)); if(el) map[el.id]=a; });
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ links.forEach(function(a){a.removeAttribute('aria-current')}); var a=map[e.target.id]; if(a){ a.setAttribute('aria-current','true'); } } }); },{rootMargin:'-20% 0px -70% 0px'});
+  Object.keys(map).forEach(function(id){ io.observe(document.getElementById(id)); });
+  function paint(){ document.querySelectorAll('.vj-cump').forEach(function(b){ var v=parseFloat(String(b.textContent).replace(',','.')); if(!isNaN(v)){ b.classList.toggle('up',v>=100); b.classList.toggle('down',v<100); } }); }
+  var mo=new MutationObserver(paint); document.querySelectorAll('.vj-cump').forEach(function(b){ mo.observe(b,{childList:true,characterData:true,subtree:true}); }); paint();
+})();
 </script>
 <script>
   fetch('data/actualizado.json', { cache: 'no-store' }).then((r) => r.json()).then((m) => {
