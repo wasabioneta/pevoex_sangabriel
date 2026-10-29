@@ -1,13 +1,13 @@
 [
  {
-  "periodo": "Octubre 2026",
-  "inicio": "2026-09-25",
-  "cierre": "2026-10-24",
-  "corte": "2026-10-22",
+  "periodo": "Noviembre 2026",
+  "inicio": "2026-10-25",
+  "cierre": "2026-11-24",
+  "corte": "2026-10-28",
   "turno_corte": "NOCHE",
-  "dias_transcurridos": 28,
-  "dias_periodo": 30,
-  "dias_restantes": 2,
-  "filas_sin_horas": 24
+  "dias_transcurridos": 4,
+  "dias_periodo": 31,
+  "dias_restantes": 27,
+  "filas_sin_horas": 0
  }
 ]
