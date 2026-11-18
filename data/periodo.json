@@ -3,11 +3,11 @@
   "periodo": "Noviembre 2026",
   "inicio": "2026-10-25",
   "cierre": "2026-11-24",
-  "corte": "2026-11-16",
+  "corte": "2026-11-17",
   "turno_corte": "NOCHE",
-  "dias_transcurridos": 23,
+  "dias_transcurridos": 24,
   "dias_periodo": 31,
-  "dias_restantes": 8,
+  "dias_restantes": 7,
   "filas_sin_horas": 0
  }
 ]
